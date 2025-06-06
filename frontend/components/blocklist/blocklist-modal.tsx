@@ -44,10 +44,9 @@ const POPULAR_SITES = [
   { name: 'Facebook', url: 'facebook.com', category: 'Social Media', icon: Users },
   { name: 'Instagram', url: 'instagram.com', category: 'Social Media', icon: Users },
   { name: 'Twitter/X', url: 'twitter.com', category: 'Social Media', icon: MessageCircle },
+  { name: 'WhatsApp', url: 'web.whatsapp.com', category: 'Social Media', icon: MessageCircle },
   { name: 'YouTube', url: 'youtube.com', category: 'Entertainment', icon: Video },
-  { name: 'TikTok', url: 'tiktok.com', category: 'Entertainment', icon: Video },
   { name: 'Netflix', url: 'netflix.com', category: 'Entertainment', icon: Video },
-  { name: 'Reddit', url: 'reddit.com', category: 'Social Media', icon: MessageCircle },
   { name: 'Amazon', url: 'amazon.com', category: 'Shopping', icon: ShoppingBag },
   { name: 'Twitch', url: 'twitch.tv', category: 'Entertainment', icon: Gamepad2 },
 ];

@@ -20,8 +20,6 @@ import { NotificationModule } from './notification/notification.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const isProduction = configService.get('NODE_ENV') === 'production';
-        
         return {
           type: 'postgres',
           url: configService.get('DATABASE_URL'),

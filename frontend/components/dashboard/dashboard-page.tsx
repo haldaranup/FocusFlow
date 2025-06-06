@@ -10,6 +10,7 @@ import { AnalyticsModal } from '@/components/analytics/analytics-modal'
 import { TimerSettingsModal } from '@/components/ui/timer-settings-modal'
 import { ConfirmationModal } from '@/components/ui/confirmation-modal'
 import { useBlocklist } from '@/hooks/use-blocklist'
+import { NotificationManager, type NotificationSettings } from '@/utils/notifications'
 import { toast } from 'sonner'
 import Cookies from 'js-cookie'
 import { 
@@ -96,9 +97,9 @@ export function DashboardPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [blockedItemsCount, setBlockedItemsCount] = useState(0)
 
-  // Refs for timer and audio
+  // Refs for timer and notification manager
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const notificationManagerRef = useRef<NotificationManager | null>(null)
 
   // Timer configurations - now dynamic based on settings
   const sessionConfigs = {
@@ -106,6 +107,23 @@ export function DashboardPage() {
     break: { duration: timerSettings.shortBreakDuration * 60, label: 'Break', color: 'green' },
     longBreak: { duration: timerSettings.longBreakDuration * 60, label: 'Long Break', color: 'purple' }
   }
+
+  // Initialize NotificationManager
+  useEffect(() => {
+    const notificationSettings: NotificationSettings = {
+      soundEnabled: timerSettings.soundEnabled,
+      soundType: timerSettings.soundType,
+      soundVolume: timerSettings.soundVolume,
+      browserNotifications: timerSettings.browserNotifications,
+      flashScreen: timerSettings.flashScreen
+    }
+    
+    if (notificationManagerRef.current) {
+      notificationManagerRef.current.updateSettings(notificationSettings)
+    } else {
+      notificationManagerRef.current = new NotificationManager(notificationSettings)
+    }
+  }, [timerSettings])
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -137,6 +155,36 @@ export function DashboardPage() {
       setIsBlockingActive(false);
     }
   }, [isTimerRunning, currentSession])
+
+  // Progress calculation
+  const totalTime = sessionConfigs[currentSession].duration
+  const progress = ((totalTime - timeLeft) / totalTime) * 100
+
+  // Timer countdown logic
+  useEffect(() => {
+    if (isTimerRunning && timeLeft > 0) {
+      intervalRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            handleSessionComplete()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [isTimerRunning, timeLeft])
 
   // Handle settings change
   const handleSettingsChange = (newSettings: TimerSettings) => {
@@ -266,47 +314,6 @@ export function DashboardPage() {
     }
   }
 
-  // Progress calculation for the progress bar
-  const totalTime = sessionConfigs[currentSession].duration
-  const progress = ((totalTime - timeLeft) / totalTime) * 100
-
-  // Initialize audio
-  useEffect(() => {
-    // Create audio context for notification sounds
-    audioRef.current = new Audio()
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [])
-
-  // Timer countdown logic
-  useEffect(() => {
-    if (isTimerRunning && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            handleSessionComplete()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [isTimerRunning, timeLeft])
-
   // Format time display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -324,47 +331,21 @@ export function DashboardPage() {
     return `${mins}m`
   }
 
-  // Play notification sound
-  const playNotificationSound = (type: 'start' | 'complete') => {
-    if (!soundEnabled || !audioRef.current) return
-    
-    try {
-      // Create different frequency tones for different notifications
-      const audioContext = new AudioContext()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
-      
-      oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
-      
-      if (type === 'start') {
-        // Higher pitch for start
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
-        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1)
-      } else {
-        // Lower pitch for complete
-        oscillator.frequency.setValueAtTime(400, audioContext.currentTime)
-        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1)
-        oscillator.frequency.setValueAtTime(500, audioContext.currentTime + 0.2)
-      }
-      
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
-      
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.3)
-    } catch (error) {
-      console.log('Audio not supported')
-    }
-  }
-
   // Handle session completion
   const handleSessionComplete = async () => {
     setIsTimerRunning(false)
     setSessionStatus('completed')
     
-    // Play completion sound
-    playNotificationSound('complete')
+    // Play completion notification using NotificationManager
+    if (notificationManagerRef.current) {
+      if (currentSession === 'work') {
+        await notificationManagerRef.current.notifyWorkComplete()
+      } else if (currentSession === 'longBreak') {
+        await notificationManagerRef.current.notifyLongBreakComplete()
+      } else {
+        await notificationManagerRef.current.notifyBreakComplete()
+      }
+    }
     
     // Calculate actual session duration
     const sessionDuration = sessionConfigs[currentSession].duration
@@ -422,7 +403,10 @@ export function DashboardPage() {
       setTimeout(() => {
         setIsTimerRunning(true)
         setSessionStatus('running')
-        playNotificationSound('start')
+        // Play start sound using NotificationManager
+        if (notificationManagerRef.current) {
+          notificationManagerRef.current.testSound()
+        }
         toast.success(`${sessionConfigs[nextSession].label} session auto-started!`)
       }, 1000)
     } else {
@@ -484,7 +468,11 @@ export function DashboardPage() {
     if (!isTimerRunning) {
       setIsTimerRunning(true)
       setSessionStatus('running')
-      playNotificationSound('start')
+      
+      // Play start sound using NotificationManager
+      if (notificationManagerRef.current) {
+        await notificationManagerRef.current.testSound()
+      }
       
       // Start session with blocking integration for work sessions
       if (currentSession === 'work') {
