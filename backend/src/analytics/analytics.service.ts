@@ -58,9 +58,9 @@ export class AnalyticsService {
     const sessions = await this.sessionRepository.find({
       where: {
         userId,
-        completedAt: Between(startOfDay(startDate), endOfDay(endDate)),
+        startedAt: Between(startOfDay(startDate), endOfDay(endDate)),
       },
-      order: { completedAt: 'ASC' },
+      order: { startedAt: 'ASC' },
     });
 
     const dailyStats: { [key: string]: DailyStats } = {};
@@ -80,16 +80,14 @@ export class AnalyticsService {
 
     // Process sessions
     sessions.forEach(session => {
-      if (session.completedAt) {
-        const dateKey = format(session.completedAt, 'yyyy-MM-dd');
-        if (dailyStats[dateKey]) {
-          dailyStats[dateKey].totalSessions++;
-          if (session.status === SessionStatus.COMPLETED) {
-            dailyStats[dateKey].completedSessions++;
-            // Use actualDuration if available, otherwise fall back to plannedDuration
-            const sessionDuration = session.actualDuration || session.plannedDuration || 0;
-            dailyStats[dateKey].totalFocusTime += sessionDuration;
-          }
+      const dateKey = format(session.startedAt, 'yyyy-MM-dd');
+      if (dailyStats[dateKey]) {
+        dailyStats[dateKey].totalSessions++;
+        if (session.status === SessionStatus.COMPLETED) {
+          dailyStats[dateKey].completedSessions++;
+          // Use actualDuration if available, otherwise fall back to plannedDuration
+          const sessionDuration = session.actualDuration || session.plannedDuration || 0;
+          dailyStats[dateKey].totalFocusTime += sessionDuration;
         }
       }
     });
@@ -112,9 +110,9 @@ export class AnalyticsService {
     const sessions = await this.sessionRepository.find({
       where: {
         userId,
-        completedAt: Between(startOfWeek(startDate), endOfWeek(endDate)),
+        startedAt: Between(startOfWeek(startDate), endOfWeek(endDate)),
       },
-      order: { completedAt: 'ASC' },
+      order: { startedAt: 'ASC' },
     });
 
     const weeklyStats: { [key: string]: WeeklyStats } = {};
@@ -136,19 +134,17 @@ export class AnalyticsService {
     const weeklyData: { [key: string]: { totalTime: number; completed: number; total: number } } = {};
     
     sessions.forEach(session => {
-      if (session.completedAt) {
-        const weekKey = format(startOfWeek(session.completedAt), 'yyyy-MM-dd');
-        if (!weeklyData[weekKey]) {
-          weeklyData[weekKey] = { totalTime: 0, completed: 0, total: 0 };
-        }
-        
-        weeklyData[weekKey].total++;
-        if (session.status === SessionStatus.COMPLETED) {
-          weeklyData[weekKey].completed++;
-          // Use actualDuration if available, otherwise fall back to plannedDuration
-          const sessionDuration = session.actualDuration || session.plannedDuration || 0;
-          weeklyData[weekKey].totalTime += sessionDuration;
-        }
+      const weekKey = format(startOfWeek(session.startedAt), 'yyyy-MM-dd');
+      if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = { totalTime: 0, completed: 0, total: 0 };
+      }
+      
+      weeklyData[weekKey].total++;
+      if (session.status === SessionStatus.COMPLETED) {
+        weeklyData[weekKey].completed++;
+        // Use actualDuration if available, otherwise fall back to plannedDuration
+        const sessionDuration = session.actualDuration || session.plannedDuration || 0;
+        weeklyData[weekKey].totalTime += sessionDuration;
       }
     });
 
@@ -177,7 +173,7 @@ export class AnalyticsService {
     const sessions = await this.sessionRepository.find({
       where: {
         userId,
-        completedAt: Between(startDate, endDate),
+        startedAt: Between(startDate, endDate),
         status: SessionStatus.COMPLETED,
       },
     });
@@ -191,13 +187,11 @@ export class AnalyticsService {
 
     // Process sessions by hour
     sessions.forEach(session => {
-      if (session.completedAt) {
-        const hour = getHours(session.completedAt);
-        // Use actualDuration if available, otherwise fall back to plannedDuration
-        const sessionDuration = session.actualDuration || session.plannedDuration || 0;
-        hourlyData[hour].totalTime += sessionDuration;
-        hourlyData[hour].count++;
-      }
+      const hour = getHours(session.startedAt);
+      // Use actualDuration if available, otherwise fall back to plannedDuration
+      const sessionDuration = session.actualDuration || session.plannedDuration || 0;
+      hourlyData[hour].totalTime += sessionDuration;
+      hourlyData[hour].count++;
     });
 
     // Convert to ProductivityHour array
@@ -220,7 +214,7 @@ export class AnalyticsService {
     const sessions = await this.sessionRepository.find({
       where: {
         userId,
-        completedAt: Between(startDate, endDate),
+        startedAt: Between(startDate, endDate),
         status: SessionStatus.COMPLETED,
       },
     });

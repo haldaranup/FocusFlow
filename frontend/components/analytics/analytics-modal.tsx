@@ -116,19 +116,19 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
         {children}
       </DialogTrigger>
       
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-blue-600" />
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             Analytics & Insights
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm sm:text-base">
             Track your productivity patterns and discover insights to optimize your focus sessions
           </DialogDescription>
         </DialogHeader>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           {[
             { key: 'overview', label: 'Overview', icon: Activity },
             { key: 'trends', label: 'Trends', icon: TrendingUp },
@@ -138,134 +138,139 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
             <button
               key={key}
               onClick={() => setActiveTab(key as any)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === key
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              <Icon className="h-4 w-4" />
-              {label}
+              <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">{label}</span>
+              <span className="sm:hidden">{label.slice(0, 4)}</span>
             </button>
           ))}
         </div>
 
+        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {loading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-500 mt-2">Loading analytics...</p>
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
             </div>
           )}
-
+          
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 m-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                <p className="text-red-800 dark:text-red-400">{error}</p>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Error Loading Analytics</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+                <Button onClick={() => window.location.reload()} variant="outline">
+                  Refresh Page
+                </Button>
               </div>
             </div>
           )}
 
           {overview && (
             <>
-              {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="p-4 space-y-6">
+                <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
                   {/* Key Metrics */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <Card>
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Current Streak</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Current Streak</p>
+                            <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                               {overview.insights.currentStreak}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 mt-1 hidden sm:block">
                               {getStreakMessage(overview.insights.currentStreak)}
                             </p>
                           </div>
-                          <Award className="h-8 w-8 text-yellow-500" />
+                          <Award className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />
                         </div>
                       </CardContent>
                     </Card>
 
                     <Card>
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">This Week</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">This Week</p>
+                            <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                               {formatTime(overview.insights.totalFocusTimeThisWeek)}
                             </p>
-                            <div className="mt-1">
+                            <div className="mt-1 hidden sm:block">
                               {getImprovementBadge(overview.insights.improvementFromLastWeek)}
                             </div>
                           </div>
-                          <Calendar className="h-8 w-8 text-blue-500" />
+                          <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
                         </div>
                       </CardContent>
                     </Card>
 
                     <Card>
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Peak Hour</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Peak Hour</p>
+                            <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                               {formatHour(overview.insights.peakProductivityHour)}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">Most productive time</p>
+                            <Badge className="mt-1 text-xs hidden sm:inline-flex">Productive Time</Badge>
                           </div>
-                          <Clock className="h-8 w-8 text-green-500" />
+                          <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
                         </div>
                       </CardContent>
                     </Card>
 
                     <Card>
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Best Day</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white">
-                              {overview.insights.mostProductiveDay}
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Best Day</p>
+                            <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
+                              {overview.insights.mostProductiveDay.substring(0, 3)}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">Top performing</p>
+                            <Badge className="mt-1 text-xs hidden sm:inline-flex">Most Focus</Badge>
                           </div>
-                          <Star className="h-8 w-8 text-purple-500" />
+                          <Star className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />
                         </div>
                       </CardContent>
                     </Card>
                   </div>
 
-                  {/* Weekly Trend Chart */}
+                  {/* Focus Trend Chart */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle>7-Day Focus Trend</CardTitle>
-                      <CardDescription>Daily focus time and success rate</CardDescription>
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <CardTitle className="text-base sm:text-lg">7-Day Focus Trend</CardTitle>
+                      <CardDescription className="text-sm">Daily focus time and success rate</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ResponsiveContainer width="100%" height={300}>
+                      <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                         <AreaChart data={overview.daily}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis 
                             dataKey="date" 
                             tickFormatter={formatDate}
-                            style={{ fontSize: '12px' }}
+                            style={{ fontSize: '10px' }}
+                            interval="preserveStartEnd"
                           />
                           <YAxis 
                             yAxisId="time"
                             orientation="left"
                             tickFormatter={formatChartTime}
-                            style={{ fontSize: '12px' }}
+                            style={{ fontSize: '10px' }}
                           />
                           <YAxis 
                             yAxisId="rate"
                             orientation="right"
                             domain={[0, 100]}
                             tickFormatter={(value) => `${value}%`}
-                            style={{ fontSize: '12px' }}
+                            style={{ fontSize: '10px' }}
                           />
                           <Tooltip 
                             labelFormatter={(value) => formatDate(value as string)}
@@ -293,7 +298,7 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
                             dataKey="successRate"
                             stroke="#10B981"
                             strokeWidth={2}
-                            dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                            dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
                             name="Success Rate"
                           />
                         </AreaChart>
@@ -305,26 +310,27 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
 
               {/* Trends Tab */}
               {activeTab === 'trends' && (
-                <div className="p-4 space-y-6">
+                <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
                   {/* Daily vs Weekly Comparison */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Daily Performance</CardTitle>
-                        <CardDescription>Last 7 days focus time</CardDescription>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base sm:text-lg">Daily Performance</CardTitle>
+                        <CardDescription className="text-sm">Last 7 days focus time</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <ResponsiveContainer width="100%" height={250}>
+                        <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
                           <BarChart data={overview.daily}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis 
                               dataKey="date" 
                               tickFormatter={formatDate}
-                              style={{ fontSize: '12px' }}
+                              style={{ fontSize: '10px' }}
+                              interval="preserveStartEnd"
                             />
                             <YAxis 
                               tickFormatter={formatChartTime}
-                              style={{ fontSize: '12px' }}
+                              style={{ fontSize: '10px' }}
                             />
                             <Tooltip 
                               labelFormatter={(value) => formatDate(value as string)}
@@ -333,7 +339,7 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
                             <Bar 
                               dataKey="totalFocusTime" 
                               fill="#3B82F6" 
-                              radius={[4, 4, 0, 0]}
+                              radius={[2, 2, 0, 0]}
                             />
                           </BarChart>
                         </ResponsiveContainer>
@@ -341,22 +347,23 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
                     </Card>
 
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Weekly Trends</CardTitle>
-                        <CardDescription>Last 4 weeks progress</CardDescription>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base sm:text-lg">Weekly Trends</CardTitle>
+                        <CardDescription className="text-sm">Last 4 weeks progress</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <ResponsiveContainer width="100%" height={250}>
+                        <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
                           <LineChart data={overview.weekly}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis 
                               dataKey="week" 
                               tickFormatter={formatDate}
-                              style={{ fontSize: '12px' }}
+                              style={{ fontSize: '10px' }}
+                              interval="preserveStartEnd"
                             />
                             <YAxis 
                               tickFormatter={formatChartTime}
-                              style={{ fontSize: '12px' }}
+                              style={{ fontSize: '10px' }}
                             />
                             <Tooltip 
                               labelFormatter={(value) => `Week of ${formatDate(value as string)}`}
@@ -367,7 +374,7 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
                               dataKey="totalFocusTime"
                               stroke="#10B981"
                               strokeWidth={3}
-                              dot={{ fill: '#10B981', strokeWidth: 2, r: 6 }}
+                              dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
                             />
                           </LineChart>
                         </ResponsiveContainer>
@@ -378,22 +385,22 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
                   {/* Session Type Distribution */}
                   {overview.sessionTypes.length > 0 && (
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Session Type Distribution</CardTitle>
-                        <CardDescription>How you spend your focus time</CardDescription>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base sm:text-lg">Session Type Distribution</CardTitle>
+                        <CardDescription className="text-sm">How you spend your focus time</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <ResponsiveContainer width="100%" height={250}>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                          <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
                             <PieChart>
                               <Pie
                                 data={overview.sessionTypes}
                                 cx="50%"
                                 cy="50%"
-                                outerRadius={80}
+                                outerRadius={60}
                                 fill="#8884d8"
                                 dataKey="count"
-                                label={({ type, percentage }) => `${type}: ${percentage}%`}
+                                label={({ type, percentage }) => window.innerWidth > 640 ? `${type}: ${percentage}%` : `${percentage}%`}
                               >
                                 {overview.sessionTypes.map((entry, index) => (
                                   <Cell 
@@ -406,18 +413,18 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
                             </PieChart>
                           </ResponsiveContainer>
                           
-                          <div className="space-y-3">
+                          <div className="space-y-2 sm:space-y-3">
                             {overview.sessionTypes.map((type, index) => (
                               <div key={type.type} className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3">
                                   <div 
-                                    className="w-4 h-4 rounded-full"
+                                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                                     style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                                   />
-                                  <span className="text-sm font-medium capitalize">{type.type}</span>
+                                  <span className="text-xs sm:text-sm font-medium capitalize">{type.type}</span>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-sm font-semibold">{type.count} sessions</p>
+                                  <p className="text-xs sm:text-sm font-semibold">{type.count} sessions</p>
                                   <p className="text-xs text-gray-500">{formatTime(type.totalTime)}</p>
                                 </div>
                               </div>
@@ -432,24 +439,25 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
 
               {/* Productivity Tab */}
               {activeTab === 'productivity' && (
-                <div className="p-4 space-y-6">
+                <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Productivity Heatmap</CardTitle>
-                      <CardDescription>Your focus patterns throughout the day</CardDescription>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base sm:text-lg">Productivity Heatmap</CardTitle>
+                      <CardDescription className="text-sm">Your focus patterns throughout the day</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ResponsiveContainer width="100%" height={300}>
+                      <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                         <BarChart data={overview.productivityHours}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis 
                             dataKey="hour"
                             tickFormatter={formatHour}
-                            style={{ fontSize: '12px' }}
+                            style={{ fontSize: '10px' }}
+                            interval="preserveStartEnd"
                           />
                           <YAxis 
                             tickFormatter={formatChartTime}
-                            style={{ fontSize: '12px' }}
+                            style={{ fontSize: '10px' }}
                           />
                           <Tooltip 
                             labelFormatter={(value) => formatHour(value as number)}
@@ -465,13 +473,13 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
                             dataKey="totalFocusTime" 
                             fill="#3B82F6" 
                             name="Focus Time"
-                            radius={[4, 4, 0, 0]}
+                            radius={[2, 2, 0, 0]}
                           />
                           <Bar 
                             dataKey="completedSessions" 
                             fill="#10B981" 
                             name="Sessions"
-                            radius={[4, 4, 0, 0]}
+                            radius={[2, 2, 0, 0]}
                           />
                         </BarChart>
                       </ResponsiveContainer>
@@ -479,46 +487,46 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
                   </Card>
 
                   {/* Performance Metrics */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                          <Target className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">
+                        <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                           {formatTime(overview.insights.averageDailyFocusTime)}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Average Daily Focus</p>
-                        <Badge className="mt-2">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Average Daily Focus</p>
+                        <Badge className="mt-1 sm:mt-2 text-xs">
                           {getProductivityLevel(overview.insights.averageDailyFocusTime)}
                         </Badge>
                       </CardContent>
                     </Card>
 
                     <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Zap className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                          <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
                         </div>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">
+                        <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                           {formatHour(overview.insights.peakProductivityHour)}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Peak Hour</p>
-                        <Badge className="mt-2">Prime Time</Badge>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Peak Hour</p>
+                        <Badge className="mt-1 sm:mt-2 text-xs">Prime Time</Badge>
                       </CardContent>
                     </Card>
 
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    <Card className="sm:col-span-2 lg:col-span-1">
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                          <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">
-                          {overview.insights.improvementFromLastWeek > 0 ? '+' : ''}{overview.insights.improvementFromLastWeek}%
+                        <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                          {overview.insights.currentStreak}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Weekly Change</p>
-                        <Badge className={`mt-2 ${overview.insights.improvementFromLastWeek >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {overview.insights.improvementFromLastWeek >= 0 ? 'Improving' : 'Declining'}
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Day Streak</p>
+                        <Badge className="mt-1 sm:mt-2 text-xs">
+                          {overview.insights.currentStreak >= 7 ? 'Excellent' : overview.insights.currentStreak >= 3 ? 'Good' : 'Keep Going'}
                         </Badge>
                       </CardContent>
                     </Card>
@@ -528,67 +536,66 @@ export function AnalyticsModal({ children }: AnalyticsModalProps) {
 
               {/* Insights Tab */}
               {activeTab === 'insights' && (
-                <div className="p-4 space-y-6">
+                <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
+                  {/* Recommendations */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Lightbulb className="h-5 w-5 text-yellow-500" />
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                        <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                         Personalized Recommendations
                       </CardTitle>
-                      <CardDescription>
-                        AI-powered insights to help you optimize your productivity
-                      </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {overview.insights.recommendations.map((recommendation, index) => (
-                          <div key={index} className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                            <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-gray-700 dark:text-gray-300">{recommendation}</p>
+                          <div key={index} className="flex items-start gap-3 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{index + 1}</span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{recommendation}</p>
                           </div>
                         ))}
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Quick Stats Summary */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Success Patterns</CardTitle>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base sm:text-lg">Success Patterns</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-3 sm:space-y-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Current Streak</span>
-                          <span className="font-semibold">{overview.insights.currentStreak} days</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Current Streak</span>
+                          <span className="font-semibold text-sm sm:text-base">{overview.insights.currentStreak} days</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Best Day</span>
-                          <span className="font-semibold">{overview.insights.mostProductiveDay}</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Best Day</span>
+                          <span className="font-semibold text-sm sm:text-base">{overview.insights.mostProductiveDay}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Peak Hour</span>
-                          <span className="font-semibold">{formatHour(overview.insights.peakProductivityHour)}</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Peak Hour</span>
+                          <span className="font-semibold text-sm sm:text-base">{formatHour(overview.insights.peakProductivityHour)}</span>
                         </div>
                       </CardContent>
                     </Card>
 
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Weekly Progress</CardTitle>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base sm:text-lg">Weekly Progress</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-3 sm:space-y-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">This Week</span>
-                          <span className="font-semibold">{formatTime(overview.insights.totalFocusTimeThisWeek)}</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">This Week</span>
+                          <span className="font-semibold text-sm sm:text-base">{formatTime(overview.insights.totalFocusTimeThisWeek)}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Daily Average</span>
-                          <span className="font-semibold">{formatTime(overview.insights.averageDailyFocusTime)}</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Daily Average</span>
+                          <span className="font-semibold text-sm sm:text-base">{formatTime(overview.insights.averageDailyFocusTime)}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Improvement</span>
-                          <span className={`font-semibold ${overview.insights.improvementFromLastWeek >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Improvement</span>
+                          <span className={`font-semibold text-sm sm:text-base ${overview.insights.improvementFromLastWeek >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {overview.insights.improvementFromLastWeek >= 0 ? '+' : ''}{overview.insights.improvementFromLastWeek}%
                           </span>
                         </div>

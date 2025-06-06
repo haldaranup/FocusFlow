@@ -81,7 +81,6 @@ export function DashboardPage() {
   const [timeLeft, setTimeLeft] = useState(25 * 60) // Will be updated based on settings
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('idle')
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
-  const [soundEnabled, setSoundEnabled] = useState(true)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   
   // Session statistics
@@ -551,6 +550,12 @@ export function DashboardPage() {
     )
   }
 
+  // Helper function to update timer settings and save to localStorage
+  const updateTimerSettings = (updates: Partial<TimerSettings>) => {
+    const newSettings = { ...timerSettings, ...updates }
+    handleSettingsChange(newSettings)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
       {/* Header */}
@@ -579,10 +584,10 @@ export function DashboardPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              title={soundEnabled ? 'Disable sound' : 'Enable sound'}
+              onClick={() => updateTimerSettings({ soundEnabled: !timerSettings.soundEnabled })}
+              title={timerSettings.soundEnabled ? 'Disable sound' : 'Enable sound'}
             >
-              {soundEnabled ? (
+              {timerSettings.soundEnabled ? (
                 <Volume2 className="h-4 w-4" />
               ) : (
                 <VolumeX className="h-4 w-4" />
@@ -892,4 +897,4 @@ export function DashboardPage() {
       />
     </div>
   )
-} 
+}

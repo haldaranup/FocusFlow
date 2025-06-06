@@ -3,153 +3,151 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Shield, Clock, ArrowLeft, Coffee, Target } from 'lucide-react'
+import { Shield, Clock, ArrowLeft, Coffee, Target, Pause, Lightbulb } from 'lucide-react'
 import Link from 'next/link'
+import { Home } from 'lucide-react'
 
 export default function BlockedPage() {
   const [timeRemaining, setTimeRemaining] = useState<string>('')
-  const [blockedSite, setBlockedSite] = useState<string>('')
   const [sessionType, setSessionType] = useState<string>('work')
+  const [blockedSite, setBlockedSite] = useState<string>('')
 
   useEffect(() => {
-    // Get the blocked URL from query params
+    // Get query parameters
     const urlParams = new URLSearchParams(window.location.search)
     const site = urlParams.get('site') || 'this website'
-    setBlockedSite(site)
-
-    // Check current session status
-    checkSessionStatus()
+    const type = urlParams.get('sessionType') || 'work'
+    const remaining = urlParams.get('timeRemaining') || '25:00'
     
-    // Update time remaining every second
-    const interval = setInterval(checkSessionStatus, 1000)
-    return () => clearInterval(interval)
+    setBlockedSite(site)
+    setSessionType(type)
+    setTimeRemaining(remaining)
   }, [])
 
-  const checkSessionStatus = async () => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/sessions/status/blocking`, {
-        credentials: 'include',
-      })
-      
-      if (response.ok) {
-        const status = await response.json()
-        if (status.activeSession) {
-          const startTime = new Date(status.activeSession.startedAt).getTime()
-          const plannedDuration = status.activeSession.plannedDuration * 1000
-          const endTime = startTime + plannedDuration
-          const now = Date.now()
-          const remaining = Math.max(0, endTime - now)
-          
-          if (remaining > 0) {
-            const minutes = Math.floor(remaining / 60000)
-            const seconds = Math.floor((remaining % 60000) / 1000)
-            setTimeRemaining(`${minutes}:${seconds.toString().padStart(2, '0')}`)
-            setSessionType(status.activeSession.type)
-          } else {
-            setTimeRemaining('Session completed')
-          }
-        } else {
-          setTimeRemaining('No active session')
-        }
-      }
-    } catch (error) {
-      console.error('Error checking session status:', error)
-      setTimeRemaining('Unable to check session')
+  const getSessionColor = () => {
+    switch (sessionType) {
+      case 'work':
+        return 'from-blue-500 to-blue-700'
+      case 'break':
+        return 'from-green-500 to-green-700'
+      case 'longBreak':
+        return 'from-purple-500 to-purple-700'
+      default:
+        return 'from-blue-500 to-blue-700'
     }
   }
 
   const getSessionIcon = () => {
     switch (sessionType) {
-      case 'work': return <Clock className="h-8 w-8 text-blue-500" />
-      case 'break': return <Coffee className="h-8 w-8 text-green-500" />
-      case 'longBreak': return <Target className="h-8 w-8 text-purple-500" />
-      default: return <Shield className="h-8 w-8 text-gray-500" />
-    }
-  }
-
-  const getSessionColor = () => {
-    switch (sessionType) {
-      case 'work': return 'from-blue-500 to-blue-600'
-      case 'break': return 'from-green-500 to-green-600'
-      case 'longBreak': return 'from-purple-500 to-purple-600'
-      default: return 'from-gray-500 to-gray-600'
+      case 'work':
+        return <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
+      case 'break':
+        return <Coffee className="h-5 w-5 sm:h-6 sm:w-6" />
+      case 'longBreak':
+        return <Pause className="h-5 w-5 sm:h-6 sm:w-6" />
+      default:
+        return <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-red-900 dark:to-orange-900 flex items-center justify-center p-6">
-      <Card className="w-full max-w-md bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-red-200 dark:border-red-800 shadow-2xl">
-        <CardHeader className="text-center pb-4">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-              <Shield className="h-8 w-8 text-red-600 dark:text-red-400" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl text-red-700 dark:text-red-300">
-            Site Blocked
-          </CardTitle>
-          <CardDescription className="text-red-600 dark:text-red-400">
-            This website is blocked during your focus session
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="space-y-6">
-          {/* Blocked Site Info */}
-          <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-            <p className="text-sm text-red-600 dark:text-red-400 mb-1">Blocked Site:</p>
-            <p className="font-semibold text-red-800 dark:text-red-200 break-all">{blockedSite}</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-900 dark:via-red-900 dark:to-orange-900 flex items-center justify-center p-4 overflow-x-hidden">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-red-500/10 dark:bg-red-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-500/10 dark:bg-orange-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-500/5 dark:bg-yellow-500/3 rounded-full blur-3xl"></div>
+      </div>
 
-          {/* Current Session Info */}
-          <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              {getSessionIcon()}
-              <span className="font-semibold text-gray-800 dark:text-gray-200 capitalize">
-                {sessionType} Session
-              </span>
+      <div className="max-w-lg w-full relative z-10">
+        <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg shadow-2xl border border-red-200/50 dark:border-red-800/50 hover:shadow-3xl transition-all duration-300">
+          <CardHeader className="text-center pb-6 sm:pb-8 px-6 sm:px-8 pt-8 sm:pt-10">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl animate-pulse">
+              <Shield className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Time Remaining:</p>
-            <div className={`text-2xl font-mono font-bold bg-gradient-to-r ${getSessionColor()} bg-clip-text text-transparent`}>
-              {timeRemaining}
+            <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-red-800 dark:text-red-200 mb-3">
+              Site Blocked
+            </CardTitle>
+            <CardDescription className="text-base sm:text-lg text-red-600 dark:text-red-400 font-medium">
+              Focus mode is active - stay on track! 🎯
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="space-y-6 sm:space-y-8 px-6 sm:px-8 pb-8 sm:pb-10">
+            {/* Blocked Site Info */}
+            <div className="text-center p-4 sm:p-6 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl border-2 border-red-200 dark:border-red-800 shadow-inner">
+              <p className="text-sm sm:text-base text-red-600 dark:text-red-400 mb-2 font-medium">Blocked Site:</p>
+              <p className="font-bold text-base sm:text-lg lg:text-xl text-red-800 dark:text-red-200 break-all bg-white/50 dark:bg-gray-800/50 px-3 py-2 rounded-lg">
+                {blockedSite}
+              </p>
             </div>
-          </div>
 
-          {/* Motivational Message */}
-          <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-              🎯 Stay focused! You're building great habits.
-            </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              This block will automatically lift when your session ends.
-            </p>
-          </div>
+            {/* Current Session Info */}
+            <div className="text-center p-4 sm:p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className={`p-3 rounded-2xl bg-gradient-to-r ${getSessionColor()} shadow-lg`}>
+                  {getSessionIcon()}
+                </div>
+                <span className="font-bold text-lg sm:text-xl text-gray-800 dark:text-gray-200 capitalize">
+                  {sessionType} Session
+                </span>
+              </div>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3 font-medium">Time Remaining:</p>
+              <div className={`text-3xl sm:text-4xl lg:text-5xl font-mono font-extrabold bg-gradient-to-r ${getSessionColor()} bg-clip-text text-transparent drop-shadow-lg`}>
+                {timeRemaining}
+              </div>
+            </div>
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <Link href="/dashboard" className="block">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Return to Dashboard
+            {/* Motivational Message */}
+            <div className="text-center p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl border-2 border-blue-200 dark:border-blue-800 shadow-lg">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <Target className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+                <p className="text-sm sm:text-base text-blue-700 dark:text-blue-300 font-bold">
+                  Stay focused! You're building great habits.
+                </p>
+              </div>
+              <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 leading-relaxed">
+                This block will automatically lift when your session ends. Use this time to focus on your most important tasks.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <Button 
+                onClick={() => window.close()} 
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-base sm:text-lg py-3 sm:py-4 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              >
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                Go Back
               </Button>
-            </Link>
-            
-            <Button 
-              variant="outline" 
-              className="w-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-              onClick={() => window.close()}
-            >
-              Close Tab
-            </Button>
-          </div>
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.href = '/dashboard'}
+                className="w-full border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 font-semibold text-base sm:text-lg py-3 sm:py-4 transition-all duration-300"
+              >
+                <Home className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                Dashboard
+              </Button>
+            </div>
 
-          {/* Tips */}
-          <div className="text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              💡 Tip: Use this time to focus on your current task or take a mindful break
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            {/* Pro Tip */}
+            <div className="bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-2xl p-4 sm:p-6 border-2 border-purple-200 dark:border-purple-800 shadow-lg">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl flex-shrink-0 shadow-lg">
+                  <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm sm:text-base text-purple-800 dark:text-purple-200 mb-2">💡 Pro Tip</h4>
+                  <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300 leading-relaxed">
+                    The best results come from sustained concentration. Use this focused time to tackle your most challenging and important tasks. 
+                    You've got this! 🚀
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 } 
