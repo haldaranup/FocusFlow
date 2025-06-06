@@ -28,7 +28,7 @@ export class SessionController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   create(@Body() createSessionDto: CreateSessionDto, @Request() req) {
-    return this.sessionService.create(createSessionDto, req.user.userId);
+    return this.sessionService.create(createSessionDto, req.user.id);
   }
 
   @Get()
@@ -36,7 +36,7 @@ export class SessionController {
   @ApiResponse({ status: 200, description: 'Sessions retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   findAll(@Request() req) {
-    return this.sessionService.findAllByUser(req.user.userId);
+    return this.sessionService.findAllByUser(req.user.id);
   }
 
   @Get('stats/today')
@@ -44,7 +44,7 @@ export class SessionController {
   @ApiResponse({ status: 200, description: 'Today\'s stats retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getTodayStats(@Request() req) {
-    return this.sessionService.getTodayStats(req.user.userId);
+    return this.sessionService.getTodayStats(req.user.id);
   }
 
   @Get('stats/weekly')
@@ -52,7 +52,7 @@ export class SessionController {
   @ApiResponse({ status: 200, description: 'Weekly stats retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getWeeklyStats(@Request() req) {
-    return this.sessionService.getWeeklyStats(req.user.userId);
+    return this.sessionService.getWeeklyStats(req.user.id);
   }
 
   @Get(':id')
@@ -61,7 +61,7 @@ export class SessionController {
   @ApiResponse({ status: 404, description: 'Session not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   findOne(@Param('id') id: string, @Request() req) {
-    return this.sessionService.findOne(id, req.user.userId);
+    return this.sessionService.findOne(id, req.user.id);
   }
 
   @Patch(':id')
@@ -70,7 +70,7 @@ export class SessionController {
   @ApiResponse({ status: 404, description: 'Session not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   update(@Param('id') id: string, @Body() updateSessionDto: UpdateSessionDto, @Request() req) {
-    return this.sessionService.update(id, updateSessionDto, req.user.userId);
+    return this.sessionService.update(id, updateSessionDto, req.user.id);
   }
 
   @Delete(':id')
@@ -79,6 +79,6 @@ export class SessionController {
   @ApiResponse({ status: 404, description: 'Session not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   remove(@Param('id') id: string, @Request() req) {
-    return this.sessionService.remove(id, req.user.userId);
+    return this.sessionService.remove(id, req.user.id);
   }
 } 

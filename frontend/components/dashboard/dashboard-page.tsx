@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { BlocklistModal } from '@/components/blocklist/blocklist-modal'
 import { AnalyticsModal } from '@/components/analytics/analytics-modal'
+import { TimerSettingsModal } from '@/components/ui/timer-settings-modal'
 import { useBlocklist } from '@/hooks/use-blocklist'
 import { toast } from 'sonner'
 import { 
@@ -37,14 +38,33 @@ interface SessionStats {
   successRate: number
 }
 
+interface TimerSettings {
+  workDuration: number
+  shortBreakDuration: number
+  longBreakDuration: number
+  longBreakInterval: number
+  autoStartBreaks: boolean
+  autoStartPomodoros: boolean
+}
+
 export function DashboardPage() {
   const { user, signOut } = useAuth()
   const { items: blocklistItems, getActiveItems } = useBlocklist()
   
+  // Timer settings with defaults
+  const [timerSettings, setTimerSettings] = useState<TimerSettings>({
+    workDuration: 25,
+    shortBreakDuration: 5,
+    longBreakDuration: 15,
+    longBreakInterval: 4,
+    autoStartBreaks: false,
+    autoStartPomodoros: false
+  })
+  
   // Timer state
   const [isTimerRunning, setIsTimerRunning] = useState(false)
   const [currentSession, setCurrentSession] = useState<SessionType>('work')
-  const [timeLeft, setTimeLeft] = useState(25 * 60) // 25 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(25 * 60) // Will be updated based on settings
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('idle')
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
   const [soundEnabled, setSoundEnabled] = useState(true)
@@ -61,11 +81,47 @@ export function DashboardPage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Timer configurations
+  // Timer configurations - now dynamic based on settings
   const sessionConfigs = {
-    work: { duration: 25 * 60, label: 'Work', color: 'blue' },
-    break: { duration: 5 * 60, label: 'Break', color: 'green' },
-    longBreak: { duration: 15 * 60, label: 'Long Break', color: 'purple' }
+    work: { duration: timerSettings.workDuration * 60, label: 'Work', color: 'blue' },
+    break: { duration: timerSettings.shortBreakDuration * 60, label: 'Break', color: 'green' },
+    longBreak: { duration: timerSettings.longBreakDuration * 60, label: 'Long Break', color: 'purple' }
+  }
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('focusflow-timer-settings')
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings)
+        setTimerSettings(parsed)
+      } catch (error) {
+        console.error('Failed to load timer settings:', error)
+      }
+    }
+  }, [])
+
+  // Update timeLeft when settings change and timer is idle
+  useEffect(() => {
+    if (sessionStatus === 'idle') {
+      setTimeLeft(sessionConfigs[currentSession].duration)
+    }
+  }, [timerSettings, currentSession, sessionStatus])
+
+  // Handle settings change
+  const handleSettingsChange = (newSettings: TimerSettings) => {
+    setTimerSettings(newSettings)
+    localStorage.setItem('focusflow-timer-settings', JSON.stringify(newSettings))
+    
+    // Update current session duration if idle
+    if (sessionStatus === 'idle') {
+      const newConfigs = {
+        work: { duration: newSettings.workDuration * 60 },
+        break: { duration: newSettings.shortBreakDuration * 60 },
+        longBreak: { duration: newSettings.longBreakDuration * 60 }
+      }
+      setTimeLeft(newConfigs[currentSession].duration)
+    }
   }
 
   // Progress calculation for the progress bar
@@ -168,6 +224,9 @@ export function DashboardPage() {
     // Play completion sound
     playNotificationSound('complete')
     
+    // Calculate actual session duration
+    const sessionDuration = sessionConfigs[currentSession].duration
+    
     // Show notification
     if (currentSession === 'work') {
       toast.success('🎉 Work session completed! Time for a break.')
@@ -177,16 +236,16 @@ export function DashboardPage() {
       setSessionStats(prev => ({
         ...prev,
         completedSessions: prev.completedSessions + 1,
-        totalFocusTime: prev.totalFocusTime + (25 * 60)
+        totalFocusTime: prev.totalFocusTime + sessionDuration
       }))
-      
-      // Save session to backend
-      await saveSession('work', 25 * 60, true)
     } else {
       toast.success('✨ Break completed! Ready to focus again?')
     }
 
-    // Auto-switch to next session type
+    // Save session to backend
+    await saveSession(currentSession, sessionDuration, true)
+
+    // Auto-switch to next session
     setTimeout(() => {
       autoSwitchSession()
     }, 2000)
@@ -197,10 +256,10 @@ export function DashboardPage() {
     let nextSession: SessionType
     
     if (currentSession === 'work') {
-      // After work: short break or long break (every 4 pomodoros)
-      nextSession = completedPomodoros > 0 && completedPomodoros % 4 === 0 ? 'longBreak' : 'break'
+      // After work: short break or long break (based on configurable interval)
+      nextSession = (completedPomodoros % timerSettings.longBreakInterval === 0) ? 'longBreak' : 'break'
     } else {
-      // After break: back to work
+      // After any break: work session
       nextSession = 'work'
     }
     
@@ -208,32 +267,60 @@ export function DashboardPage() {
     setTimeLeft(sessionConfigs[nextSession].duration)
     setSessionStatus('idle')
     
-    toast.info(`Switched to ${sessionConfigs[nextSession].label} session`)
+    // Auto-start next session if enabled
+    if ((nextSession !== 'work' && timerSettings.autoStartBreaks) || 
+        (nextSession === 'work' && timerSettings.autoStartPomodoros)) {
+      setTimeout(() => {
+        setIsTimerRunning(true)
+        setSessionStatus('running')
+        playNotificationSound('start')
+        toast.success(`${sessionConfigs[nextSession].label} session auto-started!`)
+      }, 1000)
+    } else {
+      toast.info(`Ready for ${sessionConfigs[nextSession].label.toLowerCase()} session`)
+    }
   }
 
   // Save session to backend
-  const saveSession = async (type: string, duration: number, completed: boolean) => {
+  const saveSession = async (type: SessionType, duration: number, completed: boolean) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sessions`, {
+      // Map frontend session types to backend enum values
+      const typeMapping = {
+        'work': 'work',
+        'break': 'break', 
+        'longBreak': 'longBreak'
+      };
+
+      const sessionData = {
+        type: typeMapping[type], // Use correct enum mapping
+        plannedDuration: duration,
+        actualDuration: completed ? duration : undefined,
+        status: completed ? 'completed' : 'interrupted', // Use lowercase enum values
+        startedAt: new Date(Date.now() - duration * 1000).toISOString(),
+        completedAt: completed ? new Date().toISOString() : undefined,
+        interruptionCount: completed ? 0 : 1
+      };
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
-          type,
-          duration,
-          completed,
-          startedAt: new Date(Date.now() - duration * 1000).toISOString(),
-          completedAt: completed ? new Date().toISOString() : null
-        })
-      })
+        credentials: 'include', // Use cookies for authentication
+        body: JSON.stringify(sessionData)
+      });
       
       if (!response.ok) {
-        throw new Error('Failed to save session')
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save session');
       }
+
+      const savedSession = await response.json();
+      console.log('Session saved successfully:', savedSession);
+      return savedSession;
     } catch (error) {
-      console.error('Error saving session:', error)
+      console.error('Error saving session:', error);
+      toast.error('Failed to save session data');
     }
   }
 
@@ -341,9 +428,14 @@ export function DashboardPage() {
             
             <ThemeToggle />
             
-            <Button variant="ghost" size="icon">
-              <Settings className="h-4 w-4" />
-            </Button>
+            <TimerSettingsModal
+              settings={timerSettings}
+              onSettingsChange={handleSettingsChange}
+            >
+              <Button variant="ghost" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TimerSettingsModal>
             
             <Button variant="ghost" size="icon" onClick={signOut}>
               <LogOut className="h-4 w-4" />
@@ -446,7 +538,7 @@ export function DashboardPage() {
                     disabled={isTimerRunning}
                   >
                     <Clock className="h-4 w-4 mr-2" />
-                    Work (25m)
+                    Work ({timerSettings.workDuration}m)
                   </Button>
                   <Button
                     variant={currentSession === 'break' ? 'default' : 'outline'}
@@ -455,7 +547,7 @@ export function DashboardPage() {
                     disabled={isTimerRunning}
                   >
                     <Zap className="h-4 w-4 mr-2" />
-                    Break (5m)
+                    Break ({timerSettings.shortBreakDuration}m)
                   </Button>
                   <Button
                     variant={currentSession === 'longBreak' ? 'default' : 'outline'}
@@ -464,8 +556,20 @@ export function DashboardPage() {
                     disabled={isTimerRunning}
                   >
                     <Target className="h-4 w-4 mr-2" />
-                    Long Break (15m)
+                    Long Break ({timerSettings.longBreakDuration}m)
                   </Button>
+                </div>
+                
+                {/* Timer Configuration Info */}
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-center space-y-1">
+                  <div>Long break every {timerSettings.longBreakInterval} work sessions</div>
+                  {(timerSettings.autoStartBreaks || timerSettings.autoStartPomodoros) && (
+                    <div className="flex items-center justify-center gap-2">
+                      <span>Auto-start:</span>
+                      {timerSettings.autoStartBreaks && <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full text-xs">Breaks</span>}
+                      {timerSettings.autoStartPomodoros && <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs">Work</span>}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -581,10 +685,15 @@ export function DashboardPage() {
                     View Analytics
                   </Button>
                 </AnalyticsModal>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Timer Settings
-                </Button>
+                <TimerSettingsModal
+                  settings={timerSettings}
+                  onSettingsChange={handleSettingsChange}
+                >
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Timer Settings
+                  </Button>
+                </TimerSettingsModal>
                 <BlocklistModal>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <Shield className="h-4 w-4 mr-2" />
