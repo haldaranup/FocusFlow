@@ -26,11 +26,21 @@ import { NotificationModule } from './notification/notification.module';
           type: 'postgres',
           url: configService.get('DATABASE_URL'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: !isProduction,
-          logging: !isProduction,
+          synchronize: true,
+          logging: ['error'],
           ssl: {
             rejectUnauthorized: false,
           },
+          extra: {
+            ssl: {
+              rejectUnauthorized: false,
+            },
+            max: 2,
+            min: 1,
+            acquire: 30000,
+            idle: 10000,
+          },
+          dropSchema: false,
         };
       },
     }),

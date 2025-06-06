@@ -86,7 +86,9 @@ export class AnalyticsService {
           dailyStats[dateKey].totalSessions++;
           if (session.status === SessionStatus.COMPLETED) {
             dailyStats[dateKey].completedSessions++;
-            dailyStats[dateKey].totalFocusTime += session.duration;
+            // Use actualDuration if available, otherwise fall back to plannedDuration
+            const sessionDuration = session.actualDuration || session.plannedDuration || 0;
+            dailyStats[dateKey].totalFocusTime += sessionDuration;
           }
         }
       }
@@ -143,7 +145,9 @@ export class AnalyticsService {
         weeklyData[weekKey].total++;
         if (session.status === SessionStatus.COMPLETED) {
           weeklyData[weekKey].completed++;
-          weeklyData[weekKey].totalTime += session.duration;
+          // Use actualDuration if available, otherwise fall back to plannedDuration
+          const sessionDuration = session.actualDuration || session.plannedDuration || 0;
+          weeklyData[weekKey].totalTime += sessionDuration;
         }
       }
     });
@@ -189,7 +193,9 @@ export class AnalyticsService {
     sessions.forEach(session => {
       if (session.completedAt) {
         const hour = getHours(session.completedAt);
-        hourlyData[hour].totalTime += session.duration;
+        // Use actualDuration if available, otherwise fall back to plannedDuration
+        const sessionDuration = session.actualDuration || session.plannedDuration || 0;
+        hourlyData[hour].totalTime += sessionDuration;
         hourlyData[hour].count++;
       }
     });
@@ -228,7 +234,9 @@ export class AnalyticsService {
         typeData[type] = { count: 0, totalTime: 0 };
       }
       typeData[type].count++;
-      typeData[type].totalTime += session.duration;
+      // Use actualDuration if available, otherwise fall back to plannedDuration
+      const sessionDuration = session.actualDuration || session.plannedDuration || 0;
+      typeData[type].totalTime += sessionDuration;
       totalSessions++;
     });
 

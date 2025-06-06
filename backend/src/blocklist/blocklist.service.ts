@@ -16,13 +16,28 @@ export class BlocklistService {
     createBlocklistItemDto: CreateBlocklistItemDto,
     userId: string,
   ): Promise<BlocklistItem> {
-    const blocklistItem = this.blocklistRepository.create({
-      ...createBlocklistItemDto,
-      userId,
-      isActive: createBlocklistItemDto.isActive ?? true,
-    });
-
-    return await this.blocklistRepository.save(blocklistItem);
+    try {
+      console.log('Service: Creating blocklist item with data:', createBlocklistItemDto);
+      console.log('Service: User ID:', userId);
+      
+      const blocklistItem = this.blocklistRepository.create({
+        ...createBlocklistItemDto,
+        userId,
+        isActive: createBlocklistItemDto.isActive ?? true,
+      });
+      
+      console.log('Service: Created entity object:', blocklistItem);
+      
+      const result = await this.blocklistRepository.save(blocklistItem);
+      console.log('Service: Saved to database:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('Service: Blocklist creation error:', error);
+      console.error('Service: Error details:', error.message);
+      console.error('Service: Error stack:', error.stack);
+      throw error;
+    }
   }
 
   async findAll(userId: string): Promise<BlocklistItem[]> {

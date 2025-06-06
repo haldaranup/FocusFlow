@@ -30,22 +30,32 @@ export class BlocklistController {
   @Post()
   @ApiOperation({ summary: 'Create a new blocklist item' })
   @ApiResponse({ status: 201, description: 'Blocklist item created successfully' })
-  create(@Body() createBlocklistItemDto: CreateBlocklistItemDto, @Req() req) {
-    return this.blocklistService.create(createBlocklistItemDto, req.user.userId);
+  async create(@Body() createBlocklistItemDto: CreateBlocklistItemDto, @Req() req) {
+    try {
+      console.log('Creating blocklist item:', createBlocklistItemDto);
+      console.log('User ID:', req.user.id);
+      const result = await this.blocklistService.create(createBlocklistItemDto, req.user.id);
+      console.log('Blocklist item created successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Blocklist creation error:', error);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all blocklist items for the authenticated user' })
   @ApiResponse({ status: 200, description: 'Blocklist items retrieved successfully' })
   findAll(@Req() req) {
-    return this.blocklistService.findAll(req.user.userId);
+    return this.blocklistService.findAll(req.user.id);
   }
 
   @Get('active')
   @ApiOperation({ summary: 'Get all active blocklist items for the authenticated user' })
   @ApiResponse({ status: 200, description: 'Active blocklist items retrieved successfully' })
   findActive(@Req() req) {
-    return this.blocklistService.findActiveItems(req.user.userId);
+    return this.blocklistService.findActiveItems(req.user.id);
   }
 
   @Get(':id')
@@ -53,7 +63,7 @@ export class BlocklistController {
   @ApiResponse({ status: 200, description: 'Blocklist item retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Blocklist item not found' })
   findOne(@Param('id') id: string, @Req() req) {
-    return this.blocklistService.findOne(id, req.user.userId);
+    return this.blocklistService.findOne(id, req.user.id);
   }
 
   @Patch(':id')
@@ -65,7 +75,7 @@ export class BlocklistController {
     @Body() updateBlocklistItemDto: UpdateBlocklistItemDto,
     @Req() req,
   ) {
-    return this.blocklistService.update(id, updateBlocklistItemDto, req.user.userId);
+    return this.blocklistService.update(id, updateBlocklistItemDto, req.user.id);
   }
 
   @Delete(':id')
@@ -73,7 +83,7 @@ export class BlocklistController {
   @ApiResponse({ status: 200, description: 'Blocklist item deleted successfully' })
   @ApiResponse({ status: 404, description: 'Blocklist item not found' })
   remove(@Param('id') id: string, @Req() req) {
-    return this.blocklistService.remove(id, req.user.userId);
+    return this.blocklistService.remove(id, req.user.id);
   }
 
   @Patch(':id/toggle')
@@ -81,6 +91,6 @@ export class BlocklistController {
   @ApiResponse({ status: 200, description: 'Blocklist item status toggled successfully' })
   @ApiResponse({ status: 404, description: 'Blocklist item not found' })
   toggleActive(@Param('id') id: string, @Req() req) {
-    return this.blocklistService.toggleActive(id, req.user.userId);
+    return this.blocklistService.toggleActive(id, req.user.id);
   }
 } 

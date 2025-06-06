@@ -31,7 +31,7 @@ export class AnalyticsController {
     @Req() req: any,
   ) {
     const numberOfDays = parseInt(days) || 7;
-    return this.analyticsService.getDailyStats(req.user.userId, numberOfDays);
+    return this.analyticsService.getDailyStats(req.user.id, numberOfDays);
   }
 
   @Get('weekly')
@@ -43,7 +43,7 @@ export class AnalyticsController {
     @Req() req: any,
   ) {
     const numberOfWeeks = parseInt(weeks) || 4;
-    return this.analyticsService.getWeeklyStats(req.user.userId, numberOfWeeks);
+    return this.analyticsService.getWeeklyStats(req.user.id, numberOfWeeks);
   }
 
   @Get('productivity-hours')
@@ -55,7 +55,7 @@ export class AnalyticsController {
     @Req() req: any,
   ) {
     const numberOfDays = parseInt(days) || 30;
-    return this.analyticsService.getProductivityByHour(req.user.userId, numberOfDays);
+    return this.analyticsService.getProductivityByHour(req.user.id, numberOfDays);
   }
 
   @Get('session-types')
@@ -67,40 +67,47 @@ export class AnalyticsController {
     @Req() req: any,
   ) {
     const numberOfDays = parseInt(days) || 30;
-    return this.analyticsService.getSessionTypeDistribution(req.user.userId, numberOfDays);
+    return this.analyticsService.getSessionTypeDistribution(req.user.id, numberOfDays);
   }
 
   @Get('insights')
   @ApiOperation({ summary: 'Get personalized productivity insights and recommendations' })
   @ApiResponse({ status: 200, description: 'Analytics insights retrieved successfully' })
   async getAnalyticsInsights(@Req() req: any) {
-    return this.analyticsService.getAnalyticsInsights(req.user.userId);
+    return this.analyticsService.getAnalyticsInsights(req.user.id);
   }
 
   @Get('overview')
   @ApiOperation({ summary: 'Get comprehensive analytics overview' })
   @ApiResponse({ status: 200, description: 'Analytics overview retrieved successfully' })
   async getAnalyticsOverview(@Req() req: any) {
-    const [
-      dailyStats,
-      weeklyStats,
-      productivityHours,
-      sessionTypes,
-      insights,
-    ] = await Promise.all([
-      this.analyticsService.getDailyStats(req.user.userId, 7),
-      this.analyticsService.getWeeklyStats(req.user.userId, 4),
-      this.analyticsService.getProductivityByHour(req.user.userId, 30),
-      this.analyticsService.getSessionTypeDistribution(req.user.userId, 30),
-      this.analyticsService.getAnalyticsInsights(req.user.userId),
-    ]);
+    try {
+      const [
+        dailyStats,
+        weeklyStats,
+        productivityHours,
+        sessionTypes,
+        insights,
+      ] = await Promise.all([
+        this.analyticsService.getDailyStats(req.user.id, 7),
+        this.analyticsService.getWeeklyStats(req.user.id, 4),
+        this.analyticsService.getProductivityByHour(req.user.id, 30),
+        this.analyticsService.getSessionTypeDistribution(req.user.id, 30),
+        this.analyticsService.getAnalyticsInsights(req.user.id),
+      ]);
 
-    return {
-      daily: dailyStats,
-      weekly: weeklyStats,
-      productivityHours,
-      sessionTypes,
-      insights,
-    };
+      return {
+        daily: dailyStats,
+        weekly: weeklyStats,
+        productivityHours,
+        sessionTypes,
+        insights,
+      };
+    } catch (error) {
+      console.error('Analytics Overview Error:', error);
+      console.error('Error stack:', error.stack);
+      console.error('User ID:', req.user?.id);
+      throw error;
+    }
   }
 } 
