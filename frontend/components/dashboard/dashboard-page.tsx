@@ -47,6 +47,12 @@ interface TimerSettings {
   longBreakInterval: number
   autoStartBreaks: boolean
   autoStartPomodoros: boolean
+  // Notification settings
+  soundEnabled: boolean
+  soundType: 'beep' | 'chime' | 'bell' | 'digital'
+  soundVolume: number
+  browserNotifications: boolean
+  flashScreen: boolean
 }
 
 export function DashboardPage() {
@@ -60,7 +66,12 @@ export function DashboardPage() {
     longBreakDuration: 15,
     longBreakInterval: 4,
     autoStartBreaks: false,
-    autoStartPomodoros: false
+    autoStartPomodoros: false,
+    soundEnabled: true,
+    soundType: 'beep',
+    soundVolume: 50,
+    browserNotifications: true,
+    flashScreen: true
   })
   
   // Timer state
@@ -859,6 +870,15 @@ export function DashboardPage() {
                     View Analytics
                   </Button>
                 </AnalyticsModal>
+                <TimerSettingsModal
+                  settings={timerSettings}
+                  onSettingsChange={handleSettingsChange}
+                >
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Timer Settings
+                  </Button>
+                </TimerSettingsModal>
                 <BlocklistModal>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <Shield className="h-4 w-4 mr-2" />

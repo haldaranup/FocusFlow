@@ -12,8 +12,9 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Settings, Clock, Coffee, Pause } from 'lucide-react'
+import { Settings, Clock, Coffee, Pause, Volume2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { NotificationManager, type NotificationSettings } from '@/utils/notifications'
 
 interface TimerSettings {
   workDuration: number
@@ -22,6 +23,12 @@ interface TimerSettings {
   longBreakInterval: number
   autoStartBreaks: boolean
   autoStartPomodoros: boolean
+  // Notification settings
+  soundEnabled: boolean
+  soundType: 'beep' | 'chime' | 'bell' | 'digital'
+  soundVolume: number
+  browserNotifications: boolean
+  flashScreen: boolean
 }
 
 interface TimerSettingsModalProps {
@@ -33,6 +40,28 @@ interface TimerSettingsModalProps {
 export function TimerSettingsModal({ children, settings, onSettingsChange }: TimerSettingsModalProps) {
   const [open, setOpen] = useState(false)
   const [localSettings, setLocalSettings] = useState(settings)
+
+  // Create notification manager for testing sounds
+  const [notificationManager, setNotificationManager] = useState<NotificationManager | null>(null)
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const manager = new NotificationManager({
+        soundEnabled: localSettings.soundEnabled,
+        soundType: localSettings.soundType,
+        soundVolume: localSettings.soundVolume,
+        browserNotifications: localSettings.browserNotifications,
+        flashScreen: localSettings.flashScreen,
+      })
+      setNotificationManager(manager)
+    }
+  }, [localSettings])
+
+  const testSound = async () => {
+    if (notificationManager && localSettings.soundEnabled) {
+      await notificationManager.testSound()
+    }
+  }
 
   // Sync local settings when settings prop changes (e.g., after page refresh)
   useEffect(() => {
@@ -70,7 +99,13 @@ export function TimerSettingsModal({ children, settings, onSettingsChange }: Tim
       longBreakDuration: 15,
       longBreakInterval: 4,
       autoStartBreaks: false,
-      autoStartPomodoros: false
+      autoStartPomodoros: false,
+      // Notification settings
+      soundEnabled: true,
+      soundType: 'beep',
+      soundVolume: 50,
+      browserNotifications: true,
+      flashScreen: true
     }
     setLocalSettings(defaultSettings)
   }
@@ -206,6 +241,119 @@ export function TimerSettingsModal({ children, settings, onSettingsChange }: Tim
                   onChange={(e) => setLocalSettings(prev => ({
                     ...prev,
                     autoStartPomodoros: e.target.checked
+                  }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Notification Settings */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">Notifications</h4>
+            
+            <div className="space-y-4">
+              {/* Sound Settings */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="sound-enabled" className="text-sm">
+                    Enable sounds
+                  </Label>
+                  <input
+                    id="sound-enabled"
+                    type="checkbox"
+                    checked={localSettings.soundEnabled}
+                    onChange={(e) => setLocalSettings(prev => ({
+                      ...prev,
+                      soundEnabled: e.target.checked
+                    }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </div>
+
+                {localSettings.soundEnabled && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="sound-type" className="text-sm">
+                        Sound type
+                      </Label>
+                      <div className="flex gap-2">
+                        <select
+                          id="sound-type"
+                          value={localSettings.soundType}
+                          onChange={(e) => setLocalSettings(prev => ({
+                            ...prev,
+                            soundType: e.target.value as 'beep' | 'chime' | 'bell' | 'digital'
+                          }))}
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                        >
+                          <option value="beep">Beep</option>
+                          <option value="chime">Chime</option>
+                          <option value="bell">Bell</option>
+                          <option value="digital">Digital</option>
+                        </select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={testSound}
+                          disabled={!localSettings.soundEnabled}
+                          className="px-3"
+                        >
+                          <Volume2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="sound-volume" className="text-sm">
+                        Volume: {localSettings.soundVolume}%
+                      </Label>
+                      <input
+                        id="sound-volume"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={localSettings.soundVolume}
+                        onChange={(e) => setLocalSettings(prev => ({
+                          ...prev,
+                          soundVolume: parseInt(e.target.value)
+                        }))}
+                        className="w-full accent-blue-600"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Other Notification Options */}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="browser-notifications" className="text-sm">
+                  Browser notifications
+                </Label>
+                <input
+                  id="browser-notifications"
+                  type="checkbox"
+                  checked={localSettings.browserNotifications}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    browserNotifications: e.target.checked
+                  }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="flash-screen" className="text-sm">
+                  Flash screen on completion
+                </Label>
+                <input
+                  id="flash-screen"
+                  type="checkbox"
+                  checked={localSettings.flashScreen}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    flashScreen: e.target.checked
                   }))}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
