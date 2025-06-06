@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { BlocklistModal } from '@/components/blocklist/blocklist-modal'
 import { AnalyticsModal } from '@/components/analytics/analytics-modal'
 import { TimerSettingsModal } from '@/components/ui/timer-settings-modal'
+import { ConfirmationModal } from '@/components/ui/confirmation-modal'
 import { useBlocklist } from '@/hooks/use-blocklist'
 import { toast } from 'sonner'
 import Cookies from 'js-cookie'
@@ -69,6 +70,7 @@ export function DashboardPage() {
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('idle')
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   
   // Session statistics
   const [sessionStats, setSessionStats] = useState<SessionStats>({
@@ -117,6 +119,14 @@ export function DashboardPage() {
     }
   }, [timerSettings, currentSession, sessionStatus])
 
+  // Update blocking status based on timer state
+  useEffect(() => {
+    // If timer is not running or not a work session, blocking should be inactive
+    if (!isTimerRunning || currentSession !== 'work') {
+      setIsBlockingActive(false);
+    }
+  }, [isTimerRunning, currentSession])
+
   // Handle settings change
   const handleSettingsChange = (newSettings: TimerSettings) => {
     setTimerSettings(newSettings)
@@ -150,7 +160,9 @@ export function DashboardPage() {
       
       if (response.ok) {
         const status = await response.json();
-        setIsBlockingActive(status.isBlocking);
+        // Only show blocking as active if there's actually an active session AND timer is running
+        const shouldBeActive = status.isBlocking && status.activeSession && isTimerRunning && currentSession === 'work';
+        setIsBlockingActive(shouldBeActive);
         setActiveSessionId(status.activeSession?.id || null);
         setBlockedItemsCount(status.blockedItems?.length || 0);
       } else {
@@ -589,7 +601,7 @@ export function DashboardPage() {
               </Button>
             </TimerSettingsModal>
             
-            <Button variant="ghost" size="icon" onClick={signOut}>
+            <Button variant="ghost" size="icon" onClick={() => setShowLogoutConfirm(true)}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -858,6 +870,18 @@ export function DashboardPage() {
           </div>
         </div>
       </main>
+      
+      {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={signOut}
+        title="Sign Out"
+        description="Are you sure you want to sign out? Any unsaved progress will be lost."
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   )
 } 

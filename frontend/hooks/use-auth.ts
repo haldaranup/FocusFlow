@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import Cookies from 'js-cookie'
 
@@ -30,6 +31,8 @@ export function useAuth() {
     user: null,
     loading: true,
   })
+
+  const router = useRouter()
 
   useEffect(() => {
     const token = Cookies.get('access_token')
@@ -106,6 +109,7 @@ export function useAuth() {
     Cookies.remove('access_token')
     delete axios.defaults.headers.common['Authorization']
     setAuthState({ user: null, loading: false })
+    router.push('/auth/login')
   }
 
   return {

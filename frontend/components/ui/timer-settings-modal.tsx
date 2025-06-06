@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -33,6 +33,11 @@ interface TimerSettingsModalProps {
 export function TimerSettingsModal({ children, settings, onSettingsChange }: TimerSettingsModalProps) {
   const [open, setOpen] = useState(false)
   const [localSettings, setLocalSettings] = useState(settings)
+
+  // Sync local settings when settings prop changes (e.g., after page refresh)
+  useEffect(() => {
+    setLocalSettings(settings)
+  }, [settings])
 
   const handleSave = () => {
     // Validate settings
