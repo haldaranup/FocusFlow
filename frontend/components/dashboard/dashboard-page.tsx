@@ -10,6 +10,7 @@ import { AnalyticsModal } from '@/components/analytics/analytics-modal'
 import { TimerSettingsModal } from '@/components/ui/timer-settings-modal'
 import { useBlocklist } from '@/hooks/use-blocklist'
 import { toast } from 'sonner'
+import Cookies from 'js-cookie'
 import { 
   Timer, 
   Play, 
@@ -77,6 +78,11 @@ export function DashboardPage() {
     successRate: 100
   })
 
+  // Blocking state
+  const [isBlockingActive, setIsBlockingActive] = useState(false)
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [blockedItemsCount, setBlockedItemsCount] = useState(0)
+
   // Refs for timer and audio
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -99,6 +105,9 @@ export function DashboardPage() {
         console.error('Failed to load timer settings:', error)
       }
     }
+    
+    // Check blocking status on mount
+    checkBlockingStatus()
   }, [])
 
   // Update timeLeft when settings change and timer is idle
@@ -121,6 +130,116 @@ export function DashboardPage() {
         longBreak: { duration: newSettings.longBreakDuration * 60 }
       }
       setTimeLeft(newConfigs[currentSession].duration)
+    }
+  }
+
+  // Check blocking status
+  const checkBlockingStatus = async () => {
+    try {
+      const token = Cookies.get('access_token');
+      if (!token) {
+        console.log('No access token found');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/sessions/status/blocking`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const status = await response.json();
+        setIsBlockingActive(status.isBlocking);
+        setActiveSessionId(status.activeSession?.id || null);
+        setBlockedItemsCount(status.blockedItems?.length || 0);
+      } else {
+        console.error('Failed to check blocking status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error checking blocking status:', error);
+    }
+  }
+
+  // Start session with blocking integration
+  const startSessionWithBlocking = async (sessionType: SessionType) => {
+    try {
+      const token = Cookies.get('access_token');
+      if (!token) {
+        toast.error('Please sign in to start a session');
+        return null;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/sessions/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ sessionType })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setActiveSessionId(result.session.id);
+        setIsBlockingActive(result.blocking.isActive);
+        setBlockedItemsCount(result.blocking.count);
+        
+        if (result.blocking.isActive) {
+          toast.success(`🛡️ Work session started! Blocking ${result.blocking.count} distracting sites.`);
+        } else {
+          toast.success(`✨ ${sessionType} session started!`);
+        }
+        
+        return result.session;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to start session');
+      }
+    } catch (error) {
+      console.error('Error starting session:', error);
+      toast.error('Failed to start session with blocking');
+      return null;
+    }
+  }
+
+  // End session with blocking integration
+  const endSessionWithBlocking = async (sessionId: string, completed: boolean = true, interruptionReason?: string) => {
+    try {
+      const token = Cookies.get('access_token');
+      if (!token) {
+        console.error('No access token found for ending session');
+        return null;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/sessions/${sessionId}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ completed, interruptionReason })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setActiveSessionId(null);
+        setIsBlockingActive(false);
+        setBlockedItemsCount(0);
+        
+        if (result.blocking.message === 'Blocking deactivated') {
+          toast.success('🎉 Session completed! Blocking deactivated.');
+        }
+        
+        return result.session;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to end session');
+      }
+    } catch (error) {
+      console.error('Error ending session:', error);
+      toast.error('Failed to end session properly');
+      return null;
     }
   }
 
@@ -227,9 +346,8 @@ export function DashboardPage() {
     // Calculate actual session duration
     const sessionDuration = sessionConfigs[currentSession].duration
     
-    // Show notification
+    // Show notification and update stats
     if (currentSession === 'work') {
-      toast.success('🎉 Work session completed! Time for a break.')
       setCompletedPomodoros(prev => prev + 1)
       
       // Update stats
@@ -238,12 +356,20 @@ export function DashboardPage() {
         completedSessions: prev.completedSessions + 1,
         totalFocusTime: prev.totalFocusTime + sessionDuration
       }))
+      
+      // End session with blocking integration
+      if (activeSessionId) {
+        await endSessionWithBlocking(activeSessionId, true);
+      } else {
+        // Fallback to old method if no active session ID
+        await saveSession(currentSession, sessionDuration, true);
+        toast.success('🎉 Work session completed! Time for a break.');
+      }
     } else {
       toast.success('✨ Break completed! Ready to focus again?')
+      // For breaks, just save normally since they don't have blocking
+      await saveSession(currentSession, sessionDuration, true);
     }
-
-    // Save session to backend
-    await saveSession(currentSession, sessionDuration, true)
 
     // Auto-switch to next session
     setTimeout(() => {
@@ -284,6 +410,12 @@ export function DashboardPage() {
   // Save session to backend
   const saveSession = async (type: SessionType, duration: number, completed: boolean) => {
     try {
+      const token = Cookies.get('access_token');
+      if (!token) {
+        console.error('No access token found for saving session');
+        return null;
+      }
+
       // Map frontend session types to backend enum values
       const typeMapping = {
         'work': 'work',
@@ -305,8 +437,8 @@ export function DashboardPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-        credentials: 'include', // Use cookies for authentication
         body: JSON.stringify(sessionData)
       });
       
@@ -325,12 +457,24 @@ export function DashboardPage() {
   }
 
   // Handle timer start/pause
-  const handleTimerToggle = () => {
+  const handleTimerToggle = async () => {
     if (!isTimerRunning) {
       setIsTimerRunning(true)
       setSessionStatus('running')
       playNotificationSound('start')
-      toast.success(`${sessionConfigs[currentSession].label} session started!`)
+      
+      // Start session with blocking integration for work sessions
+      if (currentSession === 'work') {
+        const session = await startSessionWithBlocking(currentSession);
+        if (!session) {
+          // If session creation failed, revert timer state
+          setIsTimerRunning(false)
+          setSessionStatus('idle')
+          return;
+        }
+      } else {
+        toast.success(`${sessionConfigs[currentSession].label} session started!`)
+      }
     } else {
       setIsTimerRunning(false)
       setSessionStatus('paused')
@@ -339,16 +483,24 @@ export function DashboardPage() {
   }
 
   // Handle timer stop
-  const handleTimerStop = () => {
+  const handleTimerStop = async () => {
+    const wasRunning = sessionStatus === 'running'
+    
     setIsTimerRunning(false)
     setTimeLeft(sessionConfigs[currentSession].duration)
     setSessionStatus('idle')
     
-    if (sessionStatus === 'running') {
+    if (wasRunning) {
       setSessionStats(prev => ({
         ...prev,
         interruptions: prev.interruptions + 1
       }))
+      
+      // End active session if there is one
+      if (activeSessionId) {
+        await endSessionWithBlocking(activeSessionId, false, 'User stopped timer');
+      }
+      
       toast.warning('Session interrupted')
     }
   }
@@ -652,18 +804,28 @@ export function DashboardPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Status</span>
-                    <span className={`text-sm font-semibold ${
-                      isTimerRunning && currentSession === 'work'
+                    <span className={`text-sm font-semibold flex items-center gap-2 ${
+                      isBlockingActive
                         ? 'text-green-600 dark:text-green-400' 
                         : 'text-gray-500 dark:text-gray-400'
                     }`}>
-                      {isTimerRunning && currentSession === 'work' ? 'Active' : 'Inactive'}
+                      {isBlockingActive && (
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      )}
+                      {isBlockingActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Blocked Sites</span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{getActiveItems().length}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {isBlockingActive ? blockedItemsCount : getActiveItems().length}
+                    </span>
                   </div>
+                  {isBlockingActive && (
+                    <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
+                      🛡️ Blocking {blockedItemsCount} distracting sites during work session
+                    </div>
+                  )}
                   <BlocklistModal>
                     <Button variant="outline" size="sm" className="w-full">
                       Manage Blocklist
@@ -685,15 +847,6 @@ export function DashboardPage() {
                     View Analytics
                   </Button>
                 </AnalyticsModal>
-                <TimerSettingsModal
-                  settings={timerSettings}
-                  onSettingsChange={handleSettingsChange}
-                >
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Timer Settings
-                  </Button>
-                </TimerSettingsModal>
                 <BlocklistModal>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <Shield className="h-4 w-4 mr-2" />

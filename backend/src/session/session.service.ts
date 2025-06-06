@@ -4,12 +4,14 @@ import { Repository, Between, MoreThanOrEqual } from 'typeorm';
 import { Session, SessionType, SessionStatus } from './entities/session.entity';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
+import { BlocklistService } from '../blocklist/blocklist.service';
 
 @Injectable()
 export class SessionService {
   constructor(
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
+    private blocklistService: BlocklistService,
   ) {}
 
   async create(createSessionDto: CreateSessionDto, userId: string): Promise<Session> {
@@ -64,6 +66,91 @@ export class SessionService {
   async remove(id: string, userId: string): Promise<void> {
     const session = await this.findOne(id, userId);
     await this.sessionRepository.remove(session);
+  }
+
+  // New methods for session with blocking integration
+  async startWorkSession(userId: string, sessionType: SessionType): Promise<{ session: Session, blockedItems: any[] }> {
+    // Create a new active session
+    const sessionData = {
+      type: sessionType,
+      status: SessionStatus.ACTIVE,
+      plannedDuration: this.getDefaultDuration(sessionType),
+      userId,
+      startedAt: new Date(),
+      interruptionCount: 0,
+    };
+
+    const session = this.sessionRepository.create(sessionData);
+    const savedSession = await this.sessionRepository.save(session);
+
+    // Activate blocking if it's a work session
+    let blockedItems = [];
+    if (sessionType === SessionType.WORK) {
+      blockedItems = await this.blocklistService.activateBlocking(userId);
+    }
+
+    return {
+      session: savedSession,
+      blockedItems
+    };
+  }
+
+  async endSession(sessionId: string, userId: string, completed: boolean = true, interruptionReason?: string): Promise<Session> {
+    const session = await this.findOne(sessionId, userId);
+    
+    // Update session status
+    session.status = completed ? SessionStatus.COMPLETED : SessionStatus.INTERRUPTED;
+    session.completedAt = new Date();
+    session.actualDuration = Math.floor((session.completedAt.getTime() - session.startedAt.getTime()) / 1000);
+    
+    if (!completed && interruptionReason) {
+      session.interruptionReason = interruptionReason;
+      session.interruptionCount++;
+    }
+
+    const updatedSession = await this.sessionRepository.save(session);
+
+    // Deactivate blocking if it was a work session
+    if (session.type === SessionType.WORK) {
+      await this.blocklistService.deactivateBlocking(userId);
+    }
+
+    return updatedSession;
+  }
+
+  async getCurrentActiveSession(userId: string): Promise<Session | null> {
+    return await this.sessionRepository.findOne({
+      where: { 
+        userId, 
+        status: SessionStatus.ACTIVE 
+      },
+      order: { startedAt: 'DESC' }
+    });
+  }
+
+  async getBlockingStatus(userId: string): Promise<{ isBlocking: boolean, activeSession: Session | null, blockedItems: any[] }> {
+    const activeSession = await this.getCurrentActiveSession(userId);
+    const isBlocking = activeSession && activeSession.type === SessionType.WORK;
+    const blockedItems = isBlocking ? await this.blocklistService.getActiveBlockedItems(userId) : [];
+
+    return {
+      isBlocking: !!isBlocking,
+      activeSession,
+      blockedItems
+    };
+  }
+
+  private getDefaultDuration(sessionType: SessionType): number {
+    switch (sessionType) {
+      case SessionType.WORK:
+        return 25 * 60; // 25 minutes
+      case SessionType.BREAK:
+        return 5 * 60; // 5 minutes
+      case SessionType.LONG_BREAK:
+        return 15 * 60; // 15 minutes
+      default:
+        return 25 * 60;
+    }
   }
 
   async getTodayStats(userId: string): Promise<any> {

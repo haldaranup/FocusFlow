@@ -8,6 +8,9 @@ import {
   Delete,
   UseGuards,
   Req,
+  Request,
+  BadRequestException,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -58,6 +61,33 @@ export class BlocklistController {
     return this.blocklistService.findActiveItems(req.user.id);
   }
 
+  @Get('check')
+  @ApiOperation({ summary: 'Check if a URL is blocked' })
+  @ApiResponse({ status: 200, description: 'Block status returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async checkBlocked(@Query('url') url: string, @Request() req) {
+    try {
+      if (!url) {
+        throw new BadRequestException('URL parameter is required');
+      }
+      
+      const isBlocked = await this.blocklistService.isBlocked(req.user.id, url);
+      const activeItems = await this.blocklistService.getActiveBlockedItems(req.user.id);
+      
+      return {
+        url,
+        isBlocked,
+        activeBlocks: activeItems.length,
+        blockedItems: isBlocked ? activeItems.filter(item => 
+          url.toLowerCase().includes(item.identifier.toLowerCase())
+        ) : []
+      };
+    } catch (error) {
+      console.error('Error checking blocked URL:', error);
+      throw error;
+    }
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific blocklist item' })
   @ApiResponse({ status: 200, description: 'Blocklist item retrieved successfully' })
@@ -88,9 +118,51 @@ export class BlocklistController {
 
   @Patch(':id/toggle')
   @ApiOperation({ summary: 'Toggle active status of a blocklist item' })
-  @ApiResponse({ status: 200, description: 'Blocklist item status toggled successfully' })
-  @ApiResponse({ status: 404, description: 'Blocklist item not found' })
-  toggleActive(@Param('id') id: string, @Req() req) {
-    return this.blocklistService.toggleActive(id, req.user.id);
+  @ApiResponse({ status: 200, description: 'Item active status toggled successfully' })
+  @ApiResponse({ status: 404, description: 'Item not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async toggleActive(@Param('id') id: string, @Request() req) {
+    try {
+      const result = await this.blocklistService.toggleActive(id, req.user.id);
+      return result;
+    } catch (error) {
+      console.error('Error toggling blocklist item:', error);
+      throw error;
+    }
+  }
+
+  // New blocking control endpoints
+  @Post('activate')
+  @ApiOperation({ summary: 'Activate blocking for all active items' })
+  @ApiResponse({ status: 200, description: 'Blocking activated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async activateBlocking(@Request() req) {
+    try {
+      const activeItems = await this.blocklistService.activateBlocking(req.user.id);
+      return {
+        message: 'Blocking activated',
+        blockedItems: activeItems,
+        count: activeItems.length
+      };
+    } catch (error) {
+      console.error('Error activating blocking:', error);
+      throw error;
+    }
+  }
+
+  @Post('deactivate')
+  @ApiOperation({ summary: 'Deactivate blocking' })
+  @ApiResponse({ status: 200, description: 'Blocking deactivated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async deactivateBlocking(@Request() req) {
+    try {
+      await this.blocklistService.deactivateBlocking(req.user.id);
+      return {
+        message: 'Blocking deactivated'
+      };
+    } catch (error) {
+      console.error('Error deactivating blocking:', error);
+      throw error;
+    }
   }
 } 
